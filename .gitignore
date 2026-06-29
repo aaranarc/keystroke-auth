@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Notebook outputs (commit clean notebooks; we keep the trained file separately)
+# Remove this if you want to ship rendered notebook outputs to GitHub.
+# *.ipynb
+
+# Don't ignore the trained model artefacts — we DO want these in the
+# repo so Streamlit Cloud can load them. (Each .pt is < 100 KB.)
+# models/*.pt
+# models/*.pkl
+# models/*.json
