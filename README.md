@@ -92,7 +92,7 @@ These trade off against each other through the decision threshold. The app's thr
 
 ## Author
 
-[Your name] — built as part of an AI/ML portfolio project.
+[Aarana Chaurasia]
 
 ## License
 
