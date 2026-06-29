@@ -2,7 +2,7 @@
 
 A behavioural-biometric continuous-authentication system. An LSTM learns the typing rhythm of each user from the CMU Keystroke Dynamics Benchmark Dataset and decides whether a new typing sample belongs to the claimed user or an impostor.
 
-**[➡  Live demo](https://YOUR-APP-URL.streamlit.app)** *(replace with your URL after deployment)*
+**[➡  Live demo](https://keystroke-app.streamlit.app/)** *(replace with your URL after deployment)*
 
 ---
 
