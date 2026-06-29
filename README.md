@@ -92,7 +92,7 @@ These trade off against each other through the decision threshold. The app's thr
 
 ## Author
 
-[Aarana Chaurasia]
+Aarana Chaurasia
 
 ## License
 
