@@ -105,11 +105,132 @@ if not subjects:
 # -------------------------------------------------------------------
 # Tabs
 # -------------------------------------------------------------------
-tab_browser, tab_login = st.tabs(["Sample Browser", "Demo Login"])
+tab_login, tab_browser = st.tabs(["Demo Login", "Sample Browser"])
 
 
 # ===================================================================
-# TAB 1 — Sample Browser  (existing functionality, unchanged)
+# TAB — Demo Login
+# ===================================================================
+with tab_login:
+    st.title("🔐 Keystroke Login Demo")
+    st.info(
+        "**Simulated login** — This demo uses pre-recorded test samples from "
+        "the CMU Keystroke Dynamics Benchmark Dataset. The typing in the "
+        "password box below is purely cosmetic; verification runs against a "
+        "randomly-picked test sample from the claimed user's held-out data."
+    )
+
+    # --- Login form layout ---
+    login_col, spacer, info_col = st.columns([2, 0.5, 2])
+
+    with login_col:
+        st.subheader("Sign In")
+
+        claimed_subject = st.selectbox(
+            "Claimed identity",
+            subjects,
+            index=0,
+            key="login_subject",
+        )
+
+        st.text_input(
+            "Password",
+            type="password",
+            placeholder=".tie5Roanl",
+            key="login_password",
+        )
+
+        simulate_impostor = st.toggle(
+            "Simulate impostor attempt",
+            value=False,
+            key="login_impostor_toggle",
+            help="When ON, the verifier is fed an impostor sample instead of "
+                 "a genuine one.",
+        )
+
+        login_clicked = st.button("🚪 Login", use_container_width=True, type="primary")
+
+    with info_col:
+        st.subheader("How it works")
+        st.markdown(
+            """
+            1. **Pick a subject** — each has a dedicated LSTM verifier.
+            2. **Type anything** in the password field (it's cosmetic).
+            3. **Toggle impostor mode** to see how the model handles
+               a different person's typing rhythm.
+            4. **Click Login** — a random test sample is pulled from the
+               held-out set and run through the model.
+
+            **Threshold**: `0.70` (fixed for this demo)
+            """
+        )
+
+    # --- Login logic ---
+    if login_clicked:
+        with st.spinner("Analysing typing rhythm..."):
+            time.sleep(1)
+
+        # Reuse cached loaders
+        login_model = load_model(claimed_subject)
+        login_meta = load_meta(claimed_subject)
+
+        login_test_rows = np.array(login_meta["test_rows_unscaled"])
+        login_test_labels = np.array(login_meta["test_labels"])
+
+        # Pick a random sample based on toggle
+        if simulate_impostor:
+            candidate_indices = np.where(login_test_labels == 0)[0]
+            ground_truth_label = 0
+            ground_truth_text = "Impostor"
+        else:
+            candidate_indices = np.where(login_test_labels == 1)[0]
+            ground_truth_label = 1
+            ground_truth_text = "Genuine"
+
+        chosen_idx = random.choice(candidate_indices)
+        chosen_sample = login_test_rows[chosen_idx]  # (10, 3)
+
+        # Run through model
+        with torch.no_grad():
+            x_login = torch.from_numpy(chosen_sample).float().unsqueeze(0)
+            login_prob = float(login_model(x_login).item())
+
+        login_threshold = 0.70
+        access_granted = login_prob > login_threshold
+
+        # Determine outcome classification
+        if access_granted and ground_truth_label == 1:
+            outcome = "True Accept ✅"
+        elif access_granted and ground_truth_label == 0:
+            outcome = "False Accept ⚠️"
+        elif not access_granted and ground_truth_label == 1:
+            outcome = "False Reject ⚠️"
+        else:
+            outcome = "True Reject ✅"
+
+        # --- Verdict ---
+        st.markdown("---")
+
+        if access_granted:
+            st.success("### ✅ ACCESS GRANTED\nWelcome back, {}!".format(claimed_subject))
+            st.balloons()
+        else:
+            st.error("### 🚫 ACCESS DENIED\nIdentity could not be verified for {}.".format(claimed_subject))
+
+        # --- 2-column metrics layout ---
+        met_left, met_right = st.columns(2)
+
+        with met_left:
+            st.metric("Confidence Score", f"{login_prob:.4f}")
+            st.metric("Threshold", f"{login_threshold:.2f}")
+
+        with met_right:
+            st.metric("Ground Truth", ground_truth_text)
+            st.metric("Outcome", outcome)
+
+
+# ===================================================================
+# TAB — Sample Browser  (existing functionality, unchanged)
 # ===================================================================
 with tab_browser:
     # -------------------------------------------------------------------
@@ -297,126 +418,3 @@ with tab_browser:
     )
 
 
-# ===================================================================
-# TAB 2 — Demo Login
-# ===================================================================
-with tab_login:
-    st.title("🔐 Keystroke Login Demo")
-    st.info(
-        "**Simulated login** — This demo uses pre-recorded test samples from "
-        "the CMU Keystroke Dynamics Benchmark Dataset. The typing in the "
-        "password box below is purely cosmetic; verification runs against a "
-        "randomly-picked test sample from the claimed user's held-out data."
-    )
-
-    # --- Login form layout ---
-    login_col, spacer, info_col = st.columns([2, 0.5, 2])
-
-    with login_col:
-        st.subheader("Sign In")
-
-        claimed_subject = st.selectbox(
-            "Claimed identity",
-            subjects,
-            index=0,
-            key="login_subject",
-        )
-
-        st.text_input(
-            "Password",
-            type="password",
-            placeholder=".tie5Roanl",
-            key="login_password",
-        )
-
-        simulate_impostor = st.toggle(
-            "Simulate impostor attempt",
-            value=False,
-            key="login_impostor_toggle",
-            help="When ON, the verifier is fed an impostor sample instead of "
-                 "a genuine one.",
-        )
-
-        login_clicked = st.button("🚪 Login", use_container_width=True, type="primary")
-
-    with info_col:
-        st.subheader("How it works")
-        st.markdown(
-            """
-            1. **Pick a subject** — each has a dedicated LSTM verifier.
-            2. **Type anything** in the password field (it's cosmetic).
-            3. **Toggle impostor mode** to see how the model handles
-               a different person's typing rhythm.
-            4. **Click Login** — a random test sample is pulled from the
-               held-out set and run through the model.
-
-            **Threshold**: `0.70` (fixed for this demo)
-            """
-        )
-
-    # --- Login logic ---
-    if login_clicked:
-        with st.spinner("Analysing typing rhythm..."):
-            time.sleep(1)
-
-        # Reuse cached loaders
-        login_model = load_model(claimed_subject)
-        login_meta = load_meta(claimed_subject)
-
-        login_test_rows = np.array(login_meta["test_rows_unscaled"])
-        login_test_labels = np.array(login_meta["test_labels"])
-
-        # Pick a random sample based on toggle
-        if simulate_impostor:
-            candidate_indices = np.where(login_test_labels == 0)[0]
-            ground_truth_label = 0
-            ground_truth_text = "Impostor"
-        else:
-            candidate_indices = np.where(login_test_labels == 1)[0]
-            ground_truth_label = 1
-            ground_truth_text = "Genuine"
-
-        chosen_idx = random.choice(candidate_indices)
-        chosen_sample = login_test_rows[chosen_idx]  # (10, 3)
-
-        # Run through model
-        with torch.no_grad():
-            x_login = torch.from_numpy(chosen_sample).float().unsqueeze(0)
-            login_prob = float(login_model(x_login).item())
-
-        login_threshold = 0.70
-        access_granted = login_prob > login_threshold
-
-        # --- Verdict ---
-        st.markdown("---")
-
-        if access_granted:
-            st.success(f"✅ ACCESS GRANTED — Welcome back, {claimed_subject}!")
-            st.balloons()
-        else:
-            st.error("🚫 ACCESS DENIED — Identity could not be verified")
-
-        # --- Supporting details ---
-        st.markdown("#### Verification Details")
-        detail_cols = st.columns(4)
-
-        with detail_cols[0]:
-            st.metric("Probability", f"{login_prob:.4f}")
-
-        with detail_cols[1]:
-            st.metric("Threshold", f"{login_threshold:.2f}")
-
-        with detail_cols[2]:
-            st.metric("Ground Truth", ground_truth_text)
-
-        with detail_cols[3]:
-            # Determine outcome classification
-            if access_granted and ground_truth_label == 1:
-                outcome = "True Accept ✅"
-            elif access_granted and ground_truth_label == 0:
-                outcome = "False Accept ⚠️"
-            elif not access_granted and ground_truth_label == 1:
-                outcome = "False Reject ⚠️"
-            else:
-                outcome = "True Reject ✅"
-            st.metric("Outcome", outcome)
