@@ -4,6 +4,9 @@ A behavioural-biometric continuous-authentication system. An LSTM learns the typ
 
 **[➡  Live demo](https://keystroke-app.streamlit.app/)** 
 ---
+The app has two tabs:
+- **Sample Browser** — browse held-out test samples and see the model's per-sample verdict
+- **Demo Login** — simulated login UI with theatrical ACCESS GRANTED / DENIED feedback
 
 ## What's in here
 
